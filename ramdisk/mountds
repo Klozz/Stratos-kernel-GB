@@ -1,0 +1,37 @@
+#!/system/bin/sh
+#SWAP fix
+#TeamMEX
+mount -o rw,remount /system
+mount -o rw,remount /data
+e2fsck -y /dev/block/mmcblk0p2
+e2fsk_exitcode=$?
+setprop cm.e2fsck.errors $e2fsk_exitcode;
+if [ "$e2fsk_exitcode" -lt 2 ];
+then
+mount -o noatime,nodiratime,barrier=1 /dev/block/mmcblk0p2 /sd-ext;
+if [ "$?" = 0 ];
+then
+mount /data
+chown 1000:1000 /sd-ext;
+chmod 771 /sd-ext;
+chown 1000:1000 /sd-ext/app;
+chmod 771 /sd-ext/app;
+chown 1000:1000 /sd-ext/dalvik-cache;
+chmod 771 /sd-ext/dalvik-cache;
+busybox cp -a /data/app /sd-ext/;
+rm -rf /data/app;
+ln -s /sd-ext/app /data/app;
+busybox cp -a /data/dalvik-cache /sd-ext/;
+rm -rf /data/dalvik-cache;
+ln -s /sd-ext/dalvik-cache /data/dalvik-cache;
+mount -o rw,remount -t yaffs2 /dev/block/mtdblock3 /system;
+mkswap /dev/block/mmcblk0p3;
+rm -rf /system/etc/fstab;
+echo "/dev/block/mmcblk0p3 swap swap" >> /system/etc/fstab;
+echo 20 > /proc/sys/vm/swappiness;
+fi
+fi
+if [ -e /system/etc/.swapon ];
+then
+swapon -a;
+fi; 
